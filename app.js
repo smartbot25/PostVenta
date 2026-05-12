@@ -443,7 +443,7 @@ btnEnviarWA.addEventListener('click', async () => {
       `Hola, te envío el reporte de incidencias de obra.\n` +
       `Período: ${fmtD(desde)} al ${fmtD(hasta)}\n` +
       `Total: ${items.length} incidencia(s)\n` +
-      `El PDF se descargó en tu dispositivo.`
+      //`El PDF se descargó en tu dispositivo.`
     );
     setTimeout(() => window.open(`https://wa.me/?text=${msg}`, '_blank'), 800);
 
