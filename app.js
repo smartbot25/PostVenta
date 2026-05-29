@@ -584,6 +584,16 @@ async function generarPDFBlob(items, desde, hasta) {
         try {
           const b64 = await urlABase64(inc.foto_url);
           const pr  = calcProps(doc, b64, fotoW, fotoH);
+          function urlABase64(url) {
+  return fetch(url)
+    .then(r => r.blob())
+    .then(blob => new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onloadend = () => res(reader.result);
+      reader.onerror = rej;
+      reader.readAsDataURL(blob);
+    }));
+          }
           // Label ANTES
           doc.setFillColor(245,158,11);
           doc.roundedRect(ML, y, 18, 5.5, 1.5, 1.5, 'F');
