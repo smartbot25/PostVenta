@@ -636,35 +636,40 @@ function toast(msg, tipo='') {
 }
 // ── FOTO SOLUCIÓN ─────────────────────────────────
 function abrirSelectorFotoSolucion(incId) {
-  const inp = document.createElement('input');
-  inp.type = 'file'; inp.accept = 'image/*';
-  inp.onchange = async () => {
-    const f = inp.files[0];
-    if (!f) return;
-    toast('Subiendo foto de solución…');
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const ext  = f.name.split('.').pop();
-      const path = `${user.id}/sol_${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from('fotos-incidencias')
-        .upload(path, f, { contentType: f.type });
-      if (upErr) throw upErr;
-      const foto_solucion_url = supabase.storage.from('fotos-incidencias').getPublicUrl(path).data.publicUrl;
-      const { error } = await supabase.from('incidencias')
-        .update({ foto_solucion_url, estado: 'resuelto' })
-        .eq('id', incId);
-      if (error) throw error;
-      incidencias = incidencias.map(i => i.id === incId ? { ...i, foto_solucion_url, estado: 'resuelto' } : i);
-      renderLista(incidencias);
-      toast('¡Incidencia marcada como resuelta! ✅', 'success');
-    } catch (err) {
-      toast('Error al subir foto: ' + err.message, 'error');
-    }
-  };
-  inp.click();
+  fotoSolInput.dataset.incId = incId;
+  fotoSolInput.value = '';
+  fotoSolInput.click();
 }
 
+fotoSolInput.addEventListener('change', async () => {
+  const f = fotoSolInput.files[0];
+  const incId = fotoSolInput.dataset.incId;
+  if (!f || !incId) return;
+  toast('Subiendo foto de solución…');
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    const ext  = f.name.split('.').pop();
+    const path = `${user.id}/sol_${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage
+      .from('fotos-incidencias')
+      .upload(path, f, { contentType: f.type });
+    if (upErr) throw upErr;
+    const foto_solucion_url = supabase.storage
+      .from('fotos-incidencias')
+      .getPublicUrl(path).data.publicUrl;
+    const { error } = await supabase.from('incidencias')
+      .update({ foto_solucion_url, estado: 'resuelto' })
+      .eq('id', incId);
+    if (error) throw error;
+    incidencias = incidencias.map(i =>
+      i.id === incId ? { ...i, foto_solucion_url, estado: 'resuelto' } : i
+    );
+    renderLista(incidencias);
+    toast('¡Incidencia resuelta! ✅', 'success');
+  } catch (err) {
+    toast('Error: ' + err.message, 'error');
+  }
+});
 async function borrarFotoSolucion(incId, fotoUrl) {
   try {
     const path = pathDeFoto(fotoUrl);
