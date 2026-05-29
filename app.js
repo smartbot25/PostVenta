@@ -35,6 +35,7 @@ const fotoInput    = $('foto-input');
 const fotoArea     = $('foto-area');
 const fotoPreview  = $('foto-preview');
 const fotoPH       = $('foto-placeholder');
+const fotoSolInput = $('foto-sol-input');
 const btnCamara    = $('btn-camara');
 const btnGaleria   = $('btn-galeria');
 const btnQuitarF   = $('btn-quitar-foto');
