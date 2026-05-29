@@ -538,6 +538,7 @@ async function generarPDFBlob(items, desde, hasta) {
 
   for (let i=0; i<items.length; i++) {
     const inc = items[i];
+    const resuelto = inc.estado === 'resuelto';
     newPage(50);
 
     // Cabecera item
@@ -549,28 +550,70 @@ async function generarPDFBlob(items, desde, hasta) {
     doc.text(inc.categoria.toUpperCase(), ML+CW-3, y+6, { align:'right' });
     y += 12;
 
+    // Estado
+    const estadoColor = resuelto ? [16,185,129] : [245,158,11];
+    doc.setFillColor(...estadoColor);
+    doc.roundedRect(ML, y, 28, 6, 1.5, 1.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(resuelto ? '✓ RESUELTO' : '⏳ PENDIENTE', ML+14, y+4.2, { align:'center' });
+    y += 10;
+
     // Fecha
-    doc.setTextColor(120,125,145); doc.setFontSize(7.5);
+    doc.setTextColor(120,125,145); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
     doc.text(`Registrado: ${fmtFecha(inc.created_at)}`, ML, y); y += 6;
 
     // Descripción
-    doc.setTextColor(30,30,30); doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.setTextColor(30,30,30); doc.setFontSize(9);
     const lines = doc.splitTextToSize(inc.descripcion, CW);
     newPage(lines.length*6+4);
     doc.text(lines, ML, y); y += lines.length*6+4;
 
-    // Foto
-    if (inc.foto_url) {
-      try {
-        const b64 = await urlABase64(inc.foto_url);
-        const pr  = calcProps(doc, b64, CW, 70);
-        newPage(pr.h+6);
-        doc.addImage(b64, 'JPEG', ML, y, pr.w, pr.h, '', 'MEDIUM');
-        y += pr.h+5;
-      } catch {
-        doc.setTextColor(180,60,60); doc.setFontSize(8);
-        doc.text('[Foto no disponible]', ML, y); y += 6;
+    // Fotos antes/después
+    const tieneAntes  = !!inc.foto_url;
+    const tieneDespues = !!inc.foto_solucion_url;
+
+    if (tieneAntes || tieneDespues) {
+      // Si tiene ambas: lado a lado. Si solo una: ancho completo
+      const ambas = tieneAntes && tieneDespues;
+      const fotoW = ambas ? (CW/2 - 3) : CW;
+      const fotoH = 65;
+
+      newPage(fotoH + 16);
+
+      if (tieneAntes) {
+        try {
+          const b64 = await urlABase64(inc.foto_url);
+          const pr  = calcProps(doc, b64, fotoW, fotoH);
+          // Label ANTES
+          doc.setFillColor(245,158,11);
+          doc.roundedRect(ML, y, 18, 5.5, 1.5, 1.5, 'F');
+          doc.setTextColor(0,0,0); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+          doc.text('ANTES', ML+9, y+3.8, { align:'center' });
+          doc.addImage(b64, 'JPEG', ML, y+7, pr.w, pr.h, '', 'MEDIUM');
+        } catch {
+          doc.setTextColor(180,60,60); doc.setFontSize(8);
+          doc.text('[Foto antes no disponible]', ML, y+10);
+        }
       }
+
+      if (tieneDespues) {
+        const xD = ambas ? ML + fotoW + 6 : ML;
+        try {
+          const b64 = await urlABase64(inc.foto_solucion_url);
+          const pr  = calcProps(doc, b64, fotoW, fotoH);
+          // Label DESPUÉS
+          doc.setFillColor(16,185,129);
+          doc.roundedRect(xD, y, 22, 5.5, 1.5, 1.5, 'F');
+          doc.setTextColor(255,255,255); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+          doc.text('DESPUÉS', xD+11, y+3.8, { align:'center' });
+          doc.addImage(b64, 'JPEG', xD, y+7, pr.w, pr.h, '', 'MEDIUM');
+        } catch {
+          doc.setTextColor(180,60,60); doc.setFontSize(8);
+          doc.text('[Foto después no disponible]', xD, y+10);
+        }
+      }
+
+      y += fotoH + 14;
     }
 
     // Separador
@@ -591,28 +634,6 @@ async function generarPDFBlob(items, desde, hasta) {
 
   return doc.output('blob');
 }
-
-function urlABase64(url) {
-  return new Promise((res, rej) => {
-    const img = new Image(); img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      const c = document.createElement('canvas');
-      c.width = img.naturalWidth; c.height = img.naturalHeight;
-      c.getContext('2d').drawImage(img,0,0);
-      res(c.toDataURL('image/jpeg', 0.82));
-    };
-    img.onerror = rej;
-    img.src = url;
-  });
-}
-
-function calcProps(doc, b64, maxW, maxH) {
-  const p = doc.getImageProperties(b64);
-  let w=maxW, h=(p.height*w)/p.width;
-  if (h>maxH) { h=maxH; w=(p.width*h)/p.height; }
-  return {w,h};
-}
-
 // ── HELPERS ───────────────────────────────────────
 function esc(s) {
   return String(s||'')
