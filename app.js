@@ -232,9 +232,13 @@ function card(inc) {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit'
   });
-  const foto = inc.foto_url ? `
+
+  const resuelto = inc.estado === 'resuelto';
+
+  const fotoAntes = inc.foto_url ? `
     <div class="card-foto-wrap" data-foto="${inc.foto_url}" data-id="${inc.id}">
-      <img class="card-foto-img" src="${inc.foto_url}" loading="lazy" alt="foto"/>
+      <span class="foto-label">ANTES</span>
+      <img class="card-foto-img" src="${inc.foto_url}" loading="lazy" alt="foto antes"/>
       <button class="btn-del-foto" title="Borrar foto">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
@@ -243,12 +247,40 @@ function card(inc) {
       </button>
     </div>` : '';
 
+  const fotoDespues = inc.foto_solucion_url ? `
+    <div class="card-foto-wrap" data-foto="${inc.foto_solucion_url}" data-id="${inc.id}">
+      <span class="foto-label foto-label-ok">DESPUÉS</span>
+      <img class="card-foto-img" src="${inc.foto_solucion_url}" loading="lazy" alt="foto después"/>
+      <button class="btn-del-foto-sol" title="Borrar foto solución">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+          <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+        </svg>
+      </button>
+    </div>` : '';
+
+  const btnSolucion = !resuelto ? `
+    <button class="btn-add-sol" data-id="${inc.id}" title="Agregar foto solución">
+      ✅ Marcar resuelto + foto
+    </button>` : '';
+
+  const estadoBadge = `<span class="badge-estado ${resuelto ? 'badge-ok' : 'badge-pend'}">
+    ${resuelto ? '✅ Resuelto' : '⏳ Pendiente'}
+  </span>`;
+
+  const fotosWrap = (fotoAntes || fotoDespues) ? `
+    <div class="fotos-grid">
+      ${fotoAntes}
+      ${fotoDespues}
+    </div>` : '';
+
   return `
-  <div class="inc-card" id="card-${inc.id}" data-id="${inc.id}" data-foto="${inc.foto_url || ''}">
+  <div class="inc-card" id="card-${inc.id}" data-id="${inc.id}" data-foto="${inc.foto_url || ''}" data-foto-sol="${inc.foto_solucion_url || ''}">
     <div class="inc-top">
       <div class="inc-tags">
         <span class="tag-depto">Depto ${esc(inc.departamento)}</span>
         <span class="tag-cat">${esc(inc.categoria)}</span>
+        ${estadoBadge}
       </div>
       <button class="btn-del-inc" title="Borrar incidencia">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -258,11 +290,11 @@ function card(inc) {
       </button>
     </div>
     <p class="inc-desc">${esc(inc.descripcion)}</p>
-    ${foto}
+    ${fotosWrap}
+    ${btnSolucion}
     <span class="inc-fecha">${fecha}</span>
   </div>`;
 }
-
 // ── EVENTOS TARJETAS (delegación) ─────────────────
 listaCards.addEventListener('click', e => {
   // Borrar incidencia completa
@@ -288,6 +320,28 @@ listaCards.addEventListener('click', e => {
       'La incidencia se mantiene, solo se elimina la imagen.',
       'Sí, borrar foto',
       () => borrarFoto(w.dataset.id, w.dataset.foto)
+    );
+    return;
+  }
+  // Agregar foto solución
+  const bSol = e.target.closest('.btn-add-sol');
+  if (bSol) {
+    e.stopPropagation();
+    const incId = bSol.dataset.id;
+    abrirSelectorFotoSolucion(incId);
+    return;
+  }
+
+  // Borrar foto solución
+  const bFotoSol = e.target.closest('.btn-del-foto-sol');
+  if (bFotoSol) {
+    e.stopPropagation();
+    const w = bFotoSol.closest('.card-foto-wrap');
+    abrirConfirm(
+      '¿Borrar foto solución?',
+      'Se elimina la foto de "después" y la incidencia vuelve a Pendiente.',
+      'Sí, borrar',
+      () => borrarFotoSolucion(w.dataset.id, w.dataset.foto)
     );
     return;
   }
@@ -579,6 +633,49 @@ function toast(msg, tipo='') {
   clearTimeout(toastT);
   toastT = setTimeout(() => t.classList.add('hidden'), 3500);
 }
+// ── FOTO SOLUCIÓN ─────────────────────────────────
+function abrirSelectorFotoSolucion(incId) {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = async () => {
+    const f = inp.files[0];
+    if (!f) return;
+    toast('Subiendo foto de solución…');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const ext  = f.name.split('.').pop();
+      const path = `${user.id}/sol_${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('fotos-incidencias')
+        .upload(path, f, { contentType: f.type });
+      if (upErr) throw upErr;
+      const foto_solucion_url = supabase.storage.from('fotos-incidencias').getPublicUrl(path).data.publicUrl;
+      const { error } = await supabase.from('incidencias')
+        .update({ foto_solucion_url, estado: 'resuelto' })
+        .eq('id', incId);
+      if (error) throw error;
+      incidencias = incidencias.map(i => i.id === incId ? { ...i, foto_solucion_url, estado: 'resuelto' } : i);
+      renderLista(incidencias);
+      toast('¡Incidencia marcada como resuelta! ✅', 'success');
+    } catch (err) {
+      toast('Error al subir foto: ' + err.message, 'error');
+    }
+  };
+  inp.click();
+}
 
+async function borrarFotoSolucion(incId, fotoUrl) {
+  try {
+    const path = pathDeFoto(fotoUrl);
+    if (path) await supabase.storage.from('fotos-incidencias').remove([path]);
+    const { error } = await supabase.from('incidencias')
+      .update({ foto_solucion_url: null, estado: 'pendiente' })
+      .eq('id', incId);
+    if (error) throw error;
+    incidencias = incidencias.map(i => i.id === incId ? { ...i, foto_solucion_url: null, estado: 'pendiente' } : i);
+    renderLista(incidencias);
+    toast('Foto de solución eliminada.', 'success');
+  } catch { toast('Error al borrar.', 'error'); }
+}
 // ── INIT ──────────────────────────────────────────
 init();
