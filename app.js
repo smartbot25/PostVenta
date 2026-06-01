@@ -299,7 +299,6 @@ function card(inc) {
 
 // ── EVENTOS TARJETAS (delegación) ─────────────────
 listaCards.addEventListener('click', e => {
-  // Borrar incidencia completa
   const bInc = e.target.closest('.btn-del-inc');
   if (bInc) {
     e.stopPropagation();
@@ -312,7 +311,6 @@ listaCards.addEventListener('click', e => {
     );
     return;
   }
-  // Borrar solo foto
   const bFoto = e.target.closest('.btn-del-foto');
   if (bFoto) {
     e.stopPropagation();
@@ -325,7 +323,6 @@ listaCards.addEventListener('click', e => {
     );
     return;
   }
-  // Agregar foto solución
   const bSol = e.target.closest('.btn-add-sol');
   if (bSol) {
     e.stopPropagation();
@@ -333,8 +330,6 @@ listaCards.addEventListener('click', e => {
     abrirSelectorFotoSolucion(incId);
     return;
   }
-
-  // Borrar foto solución
   const bFotoSol = e.target.closest('.btn-del-foto-sol');
   if (bFotoSol) {
     e.stopPropagation();
@@ -347,7 +342,6 @@ listaCards.addEventListener('click', e => {
     );
     return;
   }
-  // Ver foto completa
   const img = e.target.closest('.card-foto-img');
   if (img) {
     const w = img.closest('.card-foto-wrap');
@@ -452,7 +446,7 @@ buscador.addEventListener('input', () => {
   ));
 });
 
-// ── REPORTE PDF + WHATSAPP ────────────────────────
+// ── REPORTE PDF + WHATSAPP (CORREGIDO DE FECHAS) ──
 btnReporte.addEventListener('click', () => {
   const hoy = new Date().toISOString().split('T')[0];
   fechaDesde.value = hoy;
@@ -464,20 +458,19 @@ btnCancelRep.addEventListener('click', () => modalReporte.classList.add('hidden'
 modalReporte.addEventListener('click', e => { if (e.target === modalReporte) modalReporte.classList.add('hidden'); });
 
 btnEnviarWA.addEventListener('click', async () => {
-  const desde = fechaDesde.value;
-  const hasta = fechaHasta.value;
+  const desde = fechaDesde.value; // Formato YYYY-MM-DD
+  const hasta = fechaHasta.value; // Formato YYYY-MM-DD
   if (!desde || !hasta)  { toast('Selecciona ambas fechas.', 'error'); return; }
   if (desde > hasta)     { toast('La fecha inicio no puede ser mayor al fin.', 'error'); return; }
 
-  const d0 = new Date(desde + 'T00:00:00');
-  const d1 = new Date(hasta + 'T23:59:59');
+  // FILTRO SEGURO: Extrae solo la parte de la fecha (YYYY-MM-DD) del registro de Supabase
   const items = incidencias.filter(i => {
-    const d = new Date(i.created_at);
-    return d >= d0 && d <= d1;
+    const fechaIncidencia = i.created_at.split('T')[0]; 
+    return fechaIncidencia >= desde && fechaIncidencia <= hasta;
   });
+
   if (!items.length) { toast('No hay incidencias en ese rango.', 'error'); return; }
 
-  // Mostrar loader
   btnEnviarWA.disabled = true;
   waLoader.classList.remove('hidden');
   toast('Generando PDF…');
@@ -485,7 +478,6 @@ btnEnviarWA.addEventListener('click', async () => {
   try {
     const pdfBlob = await generarPDFBlob(items, desde, hasta);
 
-    // Descargar PDF en el dispositivo
     const url  = URL.createObjectURL(pdfBlob);
     const link = document.createElement('a');
     link.href     = url;
@@ -493,13 +485,11 @@ btnEnviarWA.addEventListener('click', async () => {
     link.click();
     URL.revokeObjectURL(url);
 
-    // Abrir WhatsApp con mensaje
     const fmtD = d => { const [y,m,day]=d.split('-'); return `${day}/${m}/${y}`; };
     const msg  = encodeURIComponent(
       `Hola, te envío el reporte de incidencias de obra.\n` +
       `Período: ${fmtD(desde)} al ${fmtD(hasta)}\n` +
-      `Total: ${items.length} incidencia(s)\n` +
-      `El PDF se descargó en tu dispositivo.`);
+      `Total: ${items.length} incidencia(s)\n`);
     setTimeout(() => window.open(`https://wa.me/?text=${msg}`, '_blank'), 800);
 
     modalReporte.classList.add('hidden');
@@ -528,18 +518,16 @@ function enderezarImagen(blob) {
       URL.revokeObjectURL(img.src);
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-
-      // El canvas adopta el tamaño nativo y purga cualquier volteo EXIF móvil
       canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
-
       ctx.drawImage(img, 0, 0);
-      res(canvas.toDataURL('image/jpeg', 0.8)); // Retorna Base64 vertical real
+      res(canvas.toDataURL('image/jpeg', 0.8));
     };
     img.onerror = rej;
   });
 }
 
+// Mantiene las proporciones correctas sin estirar las imágenes
 function calcProps(doc, b64, maxW, maxH) {
   try {
     const img = new Image();
@@ -568,7 +556,7 @@ async function generarPDFBlob(items, desde, hasta) {
   const fmtD = d => { const [yr,mo,dy]=d.split('-'); return `${dy}/${mo}/${yr}`; };
   const newPage = (h=20) => { if (y+h>275) { doc.addPage(); y=20; } };
 
-  // Encabezado
+  // Encabezado del PDF
   doc.setFillColor(26,29,39);
   doc.rect(0,0,PW,22,'F');
   doc.setTextColor(245,158,11);
@@ -611,13 +599,12 @@ async function generarPDFBlob(items, desde, hasta) {
     newPage(lines.length*6+4);
     doc.text(lines, ML, y); y += lines.length*6+4;
 
-    // Fotos antes/después
+    // Fotos antes/después estructuradas para formato puramente vertical
     const tieneAntes  = !!inc.foto_url;
     const tieneDespues = !!inc.foto_solucion_url;
 
     if (tieneAntes || tieneDespues) {
       const ambas = tieneAntes && tieneDespues;
-      // Proporciones estilizadas para imágenes puramente verticales
       const fotoW = ambas ? (CW / 2 - 3) : (CW * 0.65);
       const fotoH = ambas ? 85 : 95;
 
@@ -628,7 +615,6 @@ async function generarPDFBlob(items, desde, hasta) {
           const b64 = await urlABase64(inc.foto_url);
           const pr  = calcProps(doc, b64, fotoW, fotoH);
           
-          // Label ANTES
           doc.setFillColor(245,158,11);
           doc.roundedRect(ML, y, 18, 5.5, 1.5, 1.5, 'F');
           doc.setTextColor(0,0,0); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
@@ -646,7 +632,6 @@ async function generarPDFBlob(items, desde, hasta) {
           const b64 = await urlABase64(inc.foto_solucion_url);
           const pr  = calcProps(doc, b64, fotoW, fotoH);
           
-          // Label DESPUÉS
           doc.setFillColor(16,185,129);
           doc.roundedRect(xD, y, 22, 5.5, 1.5, 1.5, 'F');
           doc.setTextColor(255,255,255); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
@@ -661,13 +646,13 @@ async function generarPDFBlob(items, desde, hasta) {
       y += fotoH + 14;
     }
 
-    // Separador
+    // Separador de ítems
     doc.setDrawColor(46,50,72);
     doc.line(ML, y, ML+CW, y);
     y += 8;
   }
 
-  // Pie de página
+  // Footer de página
   const total = doc.getNumberOfPages();
   for (let p=1; p<=total; p++) {
     doc.setPage(p);
