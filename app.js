@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════
-//  POSTVENTA PWA  –  app.js  VERSIÓN FINAL
+//  POSTVENTA PWA  –  app.js  VERSIÓN FINAL OPTIMIZADA
 // ═══════════════════════════════════════════════════
 const SUPABASE_URL = 'https://wwcryoazawtgsrwodbmd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3Y3J5b2F6YXd0Z3Nyd29kYm1kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NDQ3NzcsImV4cCI6MjA5NDAyMDc3N30.drxsBxR7ri0Nve5C3dMsTNzog4nz0ktGdFsoaBNpHtg';
@@ -513,20 +513,34 @@ btnEnviarWA.addEventListener('click', async () => {
   }
 });
 
-// ── HELPERS CONVERSIÓN E IMAGEN PARA PDF ──────────
+// ── HELPERS CONVERSIÓN E IMAGEN PARA PDF (CON AUTO-ROTACIÓN) ──
 function urlABase64(url) {
   return fetch(url)
     .then(r => r.blob())
-    .then(blob => new Promise((res, rej) => {
-      const reader = new FileReader();
-      reader.onloadend = () => res(reader.result);
-      reader.onerror = rej;
-      reader.readAsDataURL(blob);
-    }));
+    .then(blob => enderezarImagen(blob));
+}
+
+function enderezarImagen(blob) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.src = URL.createObjectURL(blob);
+    img.onload = () => {
+      URL.revokeObjectURL(img.src);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      // El canvas adopta el tamaño nativo y purga cualquier volteo EXIF móvil
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+
+      ctx.drawImage(img, 0, 0);
+      res(canvas.toDataURL('image/jpeg', 0.8)); // Retorna Base64 vertical real
+    };
+    img.onerror = rej;
+  });
 }
 
 function calcProps(doc, b64, maxW, maxH) {
-  // Ajuste proporcional tipo "contain" matemático para evitar estiramientos
   try {
     const img = new Image();
     img.src = b64;
@@ -603,8 +617,9 @@ async function generarPDFBlob(items, desde, hasta) {
 
     if (tieneAntes || tieneDespues) {
       const ambas = tieneAntes && tieneDespues;
-      const fotoW = ambas ? (CW/2 - 3) : CW;
-      const fotoH = 65;
+      // Proporciones estilizadas para imágenes puramente verticales
+      const fotoW = ambas ? (CW / 2 - 3) : (CW * 0.65);
+      const fotoH = ambas ? 85 : 95;
 
       newPage(fotoH + 16);
 
