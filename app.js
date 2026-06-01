@@ -296,6 +296,7 @@ function card(inc) {
     <span class="inc-fecha">${fecha}</span>
   </div>`;
 }
+
 // ── EVENTOS TARJETAS (delegación) ─────────────────
 listaCards.addEventListener('click', e => {
   // Borrar incidencia completa
@@ -512,6 +513,34 @@ btnEnviarWA.addEventListener('click', async () => {
   }
 });
 
+// ── HELPERS CONVERSIÓN E IMAGEN PARA PDF ──────────
+function urlABase64(url) {
+  return fetch(url)
+    .then(r => r.blob())
+    .then(blob => new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onloadend = () => res(reader.result);
+      reader.onerror = rej;
+      reader.readAsDataURL(blob);
+    }));
+}
+
+function calcProps(doc, b64, maxW, maxH) {
+  // Ajuste proporcional tipo "contain" matemático para evitar estiramientos
+  try {
+    const img = new Image();
+    img.src = b64;
+    let w = img.width || maxW;
+    let h = img.height || maxH;
+    const ratio = w / h;
+    if (w > maxW) { w = maxW; h = w / ratio; }
+    if (h > maxH) { h = maxH; w = h * ratio; }
+    return { w, h };
+  } catch {
+    return { w: maxW, h: maxH };
+  }
+}
+
 // ── GENERAR PDF (retorna Blob) ────────────────────
 async function generarPDFBlob(items, desde, hasta) {
   const { jsPDF } = window.jspdf;
@@ -573,7 +602,6 @@ async function generarPDFBlob(items, desde, hasta) {
     const tieneDespues = !!inc.foto_solucion_url;
 
     if (tieneAntes || tieneDespues) {
-      // Si tiene ambas: lado a lado. Si solo una: ancho completo
       const ambas = tieneAntes && tieneDespues;
       const fotoW = ambas ? (CW/2 - 3) : CW;
       const fotoH = 65;
@@ -584,16 +612,7 @@ async function generarPDFBlob(items, desde, hasta) {
         try {
           const b64 = await urlABase64(inc.foto_url);
           const pr  = calcProps(doc, b64, fotoW, fotoH);
-          function urlABase64(url) {
-  return fetch(url)
-    .then(r => r.blob())
-    .then(blob => new Promise((res, rej) => {
-      const reader = new FileReader();
-      reader.onloadend = () => res(reader.result);
-      reader.onerror = rej;
-      reader.readAsDataURL(blob);
-    }));
-          }
+          
           // Label ANTES
           doc.setFillColor(245,158,11);
           doc.roundedRect(ML, y, 18, 5.5, 1.5, 1.5, 'F');
@@ -611,6 +630,7 @@ async function generarPDFBlob(items, desde, hasta) {
         try {
           const b64 = await urlABase64(inc.foto_solucion_url);
           const pr  = calcProps(doc, b64, fotoW, fotoH);
+          
           // Label DESPUÉS
           doc.setFillColor(16,185,129);
           doc.roundedRect(xD, y, 22, 5.5, 1.5, 1.5, 'F');
@@ -644,7 +664,8 @@ async function generarPDFBlob(items, desde, hasta) {
 
   return doc.output('blob');
 }
-// ── HELPERS ───────────────────────────────────────
+
+// ── HELPERS GENERALES ─────────────────────────────
 function esc(s) {
   return String(s||'')
     .replace(/&/g,'&amp;').replace(/</g,'&lt;')
@@ -665,6 +686,7 @@ function toast(msg, tipo='') {
   clearTimeout(toastT);
   toastT = setTimeout(() => t.classList.add('hidden'), 3500);
 }
+
 // ── FOTO SOLUCIÓN ─────────────────────────────────
 function abrirSelectorFotoSolucion(incId) {
   fotoSolInput.dataset.incId = incId;
@@ -701,6 +723,7 @@ fotoSolInput.addEventListener('change', async () => {
     toast('Error: ' + err.message, 'error');
   }
 });
+
 async function borrarFotoSolucion(incId, fotoUrl) {
   try {
     const path = pathDeFoto(fotoUrl);
@@ -714,5 +737,6 @@ async function borrarFotoSolucion(incId, fotoUrl) {
     toast('Foto de solución eliminada.', 'success');
   } catch { toast('Error al borrar.', 'error'); }
 }
+
 // ── INIT ──────────────────────────────────────────
 init();
