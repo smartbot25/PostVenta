@@ -446,7 +446,7 @@ buscador.addEventListener('input', () => {
   ));
 });
 
-// ── REPORTE PDF + WHATSAPP (CORREGIDO DE FECHAS) ──
+// ── REPORTE PDF + WHATSAPP ────────────────────────
 btnReporte.addEventListener('click', () => {
   const hoy = new Date().toISOString().split('T')[0];
   fechaDesde.value = hoy;
@@ -458,14 +458,13 @@ btnCancelRep.addEventListener('click', () => modalReporte.classList.add('hidden'
 modalReporte.addEventListener('click', e => { if (e.target === modalReporte) modalReporte.classList.add('hidden'); });
 
 btnEnviarWA.addEventListener('click', async () => {
-  const desde = fechaDesde.value; // Formato YYYY-MM-DD
-  const hasta = fechaHasta.value; // Formato YYYY-MM-DD
+  const desde = fechaDesde.value;
+  const hasta = fechaHasta.value;
   if (!desde || !hasta)  { toast('Selecciona ambas fechas.', 'error'); return; }
   if (desde > hasta)     { toast('La fecha inicio no puede ser mayor al fin.', 'error'); return; }
 
-  // FILTRO SEGURO: Extrae solo la parte de la fecha (YYYY-MM-DD) del registro de Supabase
   const items = incidencias.filter(i => {
-    const fechaIncidencia = i.created_at.split('T')[0]; 
+    const fechaIncidencia = i.created_at.split('T')[0];
     return fechaIncidencia >= desde && fechaIncidencia <= hasta;
   });
 
@@ -473,10 +472,15 @@ btnEnviarWA.addEventListener('click', async () => {
 
   btnEnviarWA.disabled = true;
   waLoader.classList.remove('hidden');
-  toast('Generando PDF…');
+  toast('Cargando imágenes…');
 
   try {
-    const pdfBlob = await generarPDFBlob(items, desde, hasta);
+    // PRE-CARGAR TODAS LAS IMÁGENES ANTES DE GENERAR EL PDF
+    toast('Preparando fotos…');
+    const imagenesCache = await precargarImagenes(items);
+
+    toast('Generando PDF…');
+    const pdfBlob = await generarPDFBlob(items, desde, hasta, imagenesCache);
 
     const url  = URL.createObjectURL(pdfBlob);
     const link = document.createElement('a');
@@ -503,48 +507,83 @@ btnEnviarWA.addEventListener('click', async () => {
   }
 });
 
-// ── HELPERS CONVERSIÓN E IMAGEN PARA PDF (CON AUTO-ROTACIÓN) ──
+// ── PRE-CARGA DE IMÁGENES (resuelve TODAS antes de tocar jsPDF) ──
+async function precargarImagenes(items) {
+  const cache = {};
+  const promesas = [];
+
+  for (const inc of items) {
+    if (inc.foto_url) {
+      promesas.push(
+        urlABase64(inc.foto_url)
+          .then(b64 => { cache[inc.foto_url] = b64; })
+          .catch(() => { cache[inc.foto_url] = null; })
+      );
+    }
+    if (inc.foto_solucion_url) {
+      promesas.push(
+        urlABase64(inc.foto_solucion_url)
+          .then(b64 => { cache[inc.foto_solucion_url] = b64; })
+          .catch(() => { cache[inc.foto_solucion_url] = null; })
+      );
+    }
+  }
+
+  // Espera a que TODAS las imágenes terminen (éxito o error)
+  await Promise.allSettled(promesas);
+  return cache;
+}
+
+// ── HELPERS CONVERSIÓN E IMAGEN PARA PDF ──────────
 function urlABase64(url) {
-  return fetch(url)
-    .then(r => r.blob())
+  return fetch(url, { mode: 'cors', cache: 'no-store' })
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.blob();
+    })
     .then(blob => enderezarImagen(blob));
 }
 
 function enderezarImagen(blob) {
   return new Promise((res, rej) => {
     const img = new Image();
-    img.src = URL.createObjectURL(blob);
+    const objectUrl = URL.createObjectURL(blob);
     img.onload = () => {
-      URL.revokeObjectURL(img.src);
+      URL.revokeObjectURL(objectUrl);
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      canvas.width = img.naturalWidth;
+      canvas.width  = img.naturalWidth;
       canvas.height = img.naturalHeight;
       ctx.drawImage(img, 0, 0);
-      res(canvas.toDataURL('image/jpeg', 0.8));
+      res(canvas.toDataURL('image/jpeg', 0.82));
     };
-    img.onerror = rej;
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      rej(new Error('No se pudo cargar la imagen'));
+    };
+    img.src = objectUrl;
   });
 }
 
-// Mantiene las proporciones correctas sin estirar las imágenes
-function calcProps(doc, b64, maxW, maxH) {
-  try {
+// Mantiene proporciones correctas
+function calcProps(b64, maxW, maxH) {
+  return new Promise(resolve => {
     const img = new Image();
+    img.onload = () => {
+      let w = img.naturalWidth  || maxW;
+      let h = img.naturalHeight || maxH;
+      const ratio = w / h;
+      if (w > maxW) { w = maxW; h = w / ratio; }
+      if (h > maxH) { h = maxH; w = h * ratio; }
+      resolve({ w, h });
+    };
+    img.onerror = () => resolve({ w: maxW, h: maxH });
     img.src = b64;
-    let w = img.width || maxW;
-    let h = img.height || maxH;
-    const ratio = w / h;
-    if (w > maxW) { w = maxW; h = w / ratio; }
-    if (h > maxH) { h = maxH; w = h * ratio; }
-    return { w, h };
-  } catch {
-    return { w: maxW, h: maxH };
-  }
+  });
 }
 
 // ── GENERAR PDF (retorna Blob) ────────────────────
-async function generarPDFBlob(items, desde, hasta) {
+async function generarPDFBlob(items, desde, hasta, imagenesCache) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const PW=210, ML=14, MR=14, CW=PW-ML-MR;
@@ -556,7 +595,7 @@ async function generarPDFBlob(items, desde, hasta) {
   const fmtD = d => { const [yr,mo,dy]=d.split('-'); return `${dy}/${mo}/${yr}`; };
   const newPage = (h=20) => { if (y+h>275) { doc.addPage(); y=20; } };
 
-  // Encabezado del PDF
+  // Encabezado
   doc.setFillColor(26,29,39);
   doc.rect(0,0,PW,22,'F');
   doc.setTextColor(245,158,11);
@@ -572,7 +611,7 @@ async function generarPDFBlob(items, desde, hasta) {
     const resuelto = inc.estado === 'resuelto';
     newPage(50);
 
-    // Cabecera item
+    // Cabecera ítem
     doc.setFillColor(34,38,58);
     doc.roundedRect(ML, y, CW, 9, 2, 2, 'F');
     doc.setTextColor(245,158,11); doc.setFontSize(10); doc.setFont('helvetica','bold');
@@ -599,8 +638,8 @@ async function generarPDFBlob(items, desde, hasta) {
     newPage(lines.length*6+4);
     doc.text(lines, ML, y); y += lines.length*6+4;
 
-    // Fotos antes/después estructuradas para formato puramente vertical
-    const tieneAntes  = !!inc.foto_url;
+    // Fotos (usando el cache pre-cargado)
+    const tieneAntes   = !!inc.foto_url;
     const tieneDespues = !!inc.foto_solucion_url;
 
     if (tieneAntes || tieneDespues) {
@@ -611,16 +650,15 @@ async function generarPDFBlob(items, desde, hasta) {
       newPage(fotoH + 16);
 
       if (tieneAntes) {
-        try {
-          const b64 = await urlABase64(inc.foto_url);
-          const pr  = calcProps(doc, b64, fotoW, fotoH);
-          
+        const b64 = imagenesCache[inc.foto_url];
+        if (b64) {
+          const pr = await calcProps(b64, fotoW, fotoH);
           doc.setFillColor(245,158,11);
           doc.roundedRect(ML, y, 18, 5.5, 1.5, 1.5, 'F');
           doc.setTextColor(0,0,0); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
           doc.text('ANTES', ML+9, y+3.8, { align:'center' });
-          doc.addImage(b64, 'JPEG', ML, y+7, pr.w, pr.h, '', 'MEDIUM');
-        } catch {
+          doc.addImage(b64, 'JPEG', ML, y+7, pr.w, pr.h, '', 'FAST');
+        } else {
           doc.setTextColor(180,60,60); doc.setFontSize(8);
           doc.text('[Foto antes no disponible]', ML, y+10);
         }
@@ -628,16 +666,15 @@ async function generarPDFBlob(items, desde, hasta) {
 
       if (tieneDespues) {
         const xD = ambas ? ML + fotoW + 6 : ML;
-        try {
-          const b64 = await urlABase64(inc.foto_solucion_url);
-          const pr  = calcProps(doc, b64, fotoW, fotoH);
-          
+        const b64 = imagenesCache[inc.foto_solucion_url];
+        if (b64) {
+          const pr = await calcProps(b64, fotoW, fotoH);
           doc.setFillColor(16,185,129);
           doc.roundedRect(xD, y, 22, 5.5, 1.5, 1.5, 'F');
           doc.setTextColor(255,255,255); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
           doc.text('DESPUÉS', xD+11, y+3.8, { align:'center' });
-          doc.addImage(b64, 'JPEG', xD, y+7, pr.w, pr.h, '', 'MEDIUM');
-        } catch {
+          doc.addImage(b64, 'JPEG', xD, y+7, pr.w, pr.h, '', 'FAST');
+        } else {
           doc.setTextColor(180,60,60); doc.setFontSize(8);
           doc.text('[Foto después no disponible]', xD, y+10);
         }
@@ -646,13 +683,13 @@ async function generarPDFBlob(items, desde, hasta) {
       y += fotoH + 14;
     }
 
-    // Separador de ítems
+    // Separador
     doc.setDrawColor(46,50,72);
     doc.line(ML, y, ML+CW, y);
     y += 8;
   }
 
-  // Footer de página
+  // Footer
   const total = doc.getNumberOfPages();
   for (let p=1; p<=total; p++) {
     doc.setPage(p);
