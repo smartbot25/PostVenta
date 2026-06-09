@@ -536,35 +536,37 @@ async function precargarImagenes(items) {
 
 // ── HELPERS CONVERSIÓN E IMAGEN PARA PDF ──────────
 function urlABase64(url) {
-  return fetch(url, { mode: 'cors', cache: 'no-store' })
-    .then(r => {
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.blob();
-    })
-    .then(blob => enderezarImagen(blob));
-}
-
-function enderezarImagen(blob) {
-  return new Promise((res, rej) => {
+  return new Promise((resolve, reject) => {
     const img = new Image();
-    const objectUrl = URL.createObjectURL(blob);
+    img.crossOrigin = 'anonymous';
+
     img.onload = () => {
-      URL.revokeObjectURL(objectUrl);
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
       canvas.width  = img.naturalWidth;
       canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0);
-      res(canvas.toDataURL('image/jpeg', 0.82));
+      resolve(canvas.toDataURL('image/jpeg', 0.82));
     };
+
     img.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      rej(new Error('No se pudo cargar la imagen'));
+      // Segundo intento sin crossOrigin (fallback)
+      const img2 = new Image();
+      img2.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width  = img2.naturalWidth;
+        canvas.height = img2.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img2, 0, 0);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img2.onerror = () => reject(new Error('No se pudo cargar: ' + url));
+      img2.src = url + '?t=' + Date.now();
     };
-    img.src = objectUrl;
+
+    img.src = url + '?t=' + Date.now();
   });
 }
-
 // Mantiene proporciones correctas
 function calcProps(b64, maxW, maxH) {
   return new Promise(resolve => {
