@@ -624,52 +624,28 @@ async function generarPDFBlob(items, desde, hasta, imagenesCache) {
     const lines = doc.splitTextToSize(inc.descripcion, CW);
     newPage(lines.length*6+4);
     doc.text(lines, ML, y); y += lines.length*6+4;
+    // PONER:
+const tieneAntes = !!inc.foto_url && !!imagenesCache[inc.foto_url];
 
-    // Fotos (usando el cache pre-cargado)
-    const tieneAntes   = !!inc.foto_url;
-    const tieneDespues = !!inc.foto_solucion_url;
+if (tieneAntes) {
+  const fotoW = CW * 0.72;
+  const fotoH = 85;
+  newPage(fotoH + 20);
 
-    if (tieneAntes || tieneDespues) {
-      const ambas = tieneAntes && tieneDespues;
-      const fotoW = ambas ? (CW / 2 - 3) : (CW * 0.65);
-      const fotoH = ambas ? 85 : 95;
+  const b64 = imagenesCache[inc.foto_url];
+  const pr  = await calcProps(b64, fotoW, fotoH);
+  doc.addImage(b64, 'JPEG', ML, y, pr.w, pr.h, '', 'FAST');
+  y += pr.h + 5;
 
-      newPage(fotoH + 16);
-
-      if (tieneAntes) {
-        const b64 = imagenesCache[inc.foto_url];
-        if (b64) {
-          const pr = await calcProps(b64, fotoW, fotoH);
-          doc.setFillColor(245,158,11);
-          doc.roundedRect(ML, y, 18, 5.5, 1.5, 1.5, 'F');
-          doc.setTextColor(0,0,0); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
-          doc.text('ANTES', ML+9, y+3.8, { align:'center' });
-          doc.addImage(b64, 'JPEG', ML, y+7, pr.w, pr.h, '', 'FAST');
-        } else {
-          doc.setTextColor(180,60,60); doc.setFontSize(8);
-          doc.text('[Foto antes no disponible]', ML, y+10);
-        }
-      }
-
-      if (tieneDespues) {
-        const xD = ambas ? ML + fotoW + 6 : ML;
-        const b64 = imagenesCache[inc.foto_solucion_url];
-        if (b64) {
-          const pr = await calcProps(b64, fotoW, fotoH);
-          doc.setFillColor(16,185,129);
-          doc.roundedRect(xD, y, 22, 5.5, 1.5, 1.5, 'F');
-          doc.setTextColor(255,255,255); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
-          doc.text('DESPUÉS', xD+11, y+3.8, { align:'center' });
-          doc.addImage(b64, 'JPEG', xD, y+7, pr.w, pr.h, '', 'FAST');
-        } else {
-          doc.setTextColor(180,60,60); doc.setFontSize(8);
-          doc.text('[Foto después no disponible]', xD, y+10);
-        }
-      }
-
-      y += fotoH + 14;
-    }
-
+  // Badge estado debajo de la foto
+  const resColor = resuelto ? [16,185,129] : [245,158,11];
+  doc.setFillColor(...resColor);
+  doc.roundedRect(ML, y, 32, 6, 1.5, 1.5, 'F');
+  doc.setTextColor(resuelto ? 255 : 0, resuelto ? 255 : 0, resuelto ? 255 : 0);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.text(resuelto ? '✓ RESUELTO' : '⏳ PENDIENTE', ML + 16, y + 4.2, { align: 'center' });
+  y += 10;
+}
     // Separador
     doc.setDrawColor(46,50,72);
     doc.line(ML, y, ML+CW, y);
@@ -711,55 +687,37 @@ function toast(msg, tipo='') {
   toastT = setTimeout(() => t.classList.add('hidden'), 3500);
 }
 
-// ── FOTO SOLUCIÓN ─────────────────────────────────
-function abrirSelectorFotoSolucion(incId) {
-  fotoSolInput.dataset.incId = incId;
-  fotoSolInput.value = '';
-  fotoSolInput.click();
-}
-
-fotoSolInput.addEventListener('change', async () => {
-  const f = fotoSolInput.files[0];
-  const incId = fotoSolInput.dataset.incId;
-  if (!f || !incId) return;
-  toast('Subiendo foto de solución…');
+// ── MARCAR / DESMARCAR RESUELTO ───────────────────
+async function marcarResuelto(incId) {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    const ext  = f.name.split('.').pop();
-    const path = `${user.id}/sol_${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage
-      .from('fotos-incidencias')
-      .upload(path, f, { contentType: f.type });
-    if (upErr) throw upErr;
-    const foto_solucion_url = supabase.storage
-      .from('fotos-incidencias')
-      .getPublicUrl(path).data.publicUrl;
     const { error } = await supabase.from('incidencias')
-      .update({ foto_solucion_url, estado: 'resuelto' })
+      .update({ estado: 'resuelto' })
       .eq('id', incId);
     if (error) throw error;
     incidencias = incidencias.map(i =>
-      i.id === incId ? { ...i, foto_solucion_url, estado: 'resuelto' } : i
+      i.id === incId ? { ...i, estado: 'resuelto' } : i
     );
     renderLista(incidencias);
-    toast('¡Incidencia resuelta! ✅', 'success');
+    toast('¡Incidencia marcada como resuelta! ✅', 'success');
   } catch (err) {
     toast('Error: ' + err.message, 'error');
   }
-});
+}
 
-async function borrarFotoSolucion(incId, fotoUrl) {
+async function desmarcarResuelto(incId) {
   try {
-    const path = pathDeFoto(fotoUrl);
-    if (path) await supabase.storage.from('fotos-incidencias').remove([path]);
     const { error } = await supabase.from('incidencias')
-      .update({ foto_solucion_url: null, estado: 'pendiente' })
+      .update({ estado: 'pendiente' })
       .eq('id', incId);
     if (error) throw error;
-    incidencias = incidencias.map(i => i.id === incId ? { ...i, foto_solucion_url: null, estado: 'pendiente' } : i);
+    incidencias = incidencias.map(i =>
+      i.id === incId ? { ...i, estado: 'pendiente' } : i
+    );
     renderLista(incidencias);
-    toast('Foto de solución eliminada.', 'success');
-  } catch { toast('Error al borrar.', 'error'); }
+    toast('Incidencia desmarcada.', 'success');
+  } catch (err) {
+    toast('Error: ' + err.message, 'error');
+  }
 }
 
 // ── INIT ──────────────────────────────────────────
