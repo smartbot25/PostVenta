@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════
-//  POSTVENTA PWA  –  app.js  VERSIÓN OPTIMIZADA
+//  POSTVENTA PWA  –  app.js  VERSIÓN OPTIMIZADA PDF
 // ═══════════════════════════════════════════════════
 const SUPABASE_URL = 'https://wwcryoazawtgsrwodbmd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3Y3J5b2F6YXd0Z3Nyd29kYm1kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NDQ3NzcsImV4cCI6MjA5NDAyMDc3N30.drxsBxR7ri0Nve5C3dMsTNzog4nz0ktGdFsoaBNpHtg';
@@ -546,89 +546,141 @@ function calcProps(b64, maxW, maxH) {
   });
 }
 
-// ── GENERAR PDF ───────────────────────────────────
+// ── GENERAR PDF (INTEGRIDAD DE HOJAS Y ALINEACIÓN DE BADGES) ──
 async function generarPDFBlob(items, desde, hasta, imagenesCache) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const PW=210, ML=14, MR=14, CW=PW-ML-MR;
-  let y = 22;
+  const PW = 210, ML = 14, MR = 14, CW = PW - ML - MR;
+  const MARGIN_LIMIT = 268; // Límite inferior seguro para no pisar el pie de página
+  let y = 30;
 
   const fmtFecha = iso => new Date(iso).toLocaleString('es-PE', {
-    day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
   });
-  const fmtD = d => { const [yr,mo,dy]=d.split('-'); return `${dy}/${mo}/${yr}`; };
-  const newPage = (h=20) => { if (y+h>275) { doc.addPage(); y=20; } };
+  const fmtD = d => { const [yr, mo, dy] = d.split('-'); return `${dy}/${mo}/${yr}`; };
 
-  // Encabezado
-  doc.setFillColor(26,29,39);
-  doc.rect(0,0,PW,22,'F');
-  doc.setTextColor(245,158,11);
-  doc.setFontSize(13); doc.setFont('helvetica','bold');
+  // Encabezado principal del Reporte
+  doc.setFillColor(26, 29, 39);
+  doc.rect(0, 0, PW, 22, 'F');
+  doc.setTextColor(245, 158, 11);
+  doc.setFontSize(13); doc.setFont('helvetica', 'bold');
   doc.text('POSTVENTA – INFORME DE INCIDENCIAS', ML, 12);
-  doc.setTextColor(160,165,180);
-  doc.setFontSize(8); doc.setFont('helvetica','normal');
-  doc.text(`Período: ${fmtD(desde)} al ${fmtD(hasta)}   ·   Total: ${items.length} incidencia(s)   ·   ${fmtFecha(new Date().toISOString())}`, ML, 18);
-  y = 30;
+  doc.setTextColor(160, 165, 180);
+  doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+  doc.text(`Período: ${fmtD(desde)} al ${fmtD(hasta)}   ·   Total: ${items.length} incidencia(s)   ·   Generado: ${fmtFecha(new Date().toISOString())}`, ML, 18);
 
-  for (let i=0; i<items.length; i++) {
+  for (let i = 0; i < items.length; i++) {
     const inc = items[i];
     const resuelto = inc.estado === 'resuelto';
-    newPage(50);
 
-    // Cabecera ítem
-    doc.setFillColor(34,38,58);
-    doc.roundedRect(ML, y, CW, 9, 2, 2, 'F');
-    doc.setTextColor(245,158,11); doc.setFontSize(10); doc.setFont('helvetica','bold');
-    doc.text(`#${i+1}  Depto. ${inc.departamento}`, ML+3, y+6);
-    doc.setTextColor(180,185,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
-    doc.text(inc.categoria.toUpperCase(), ML+CW-3, y+6, { align:'right' });
-    y += 12;
+    // 1. Cálculos de altura del ítem actual
+    const headerH = 9;
+    const spacing1 = 3;
+    const badgeH = 5.5;
+    const spacing2 = 3.5;
+    const dateH = 4;
+    const spacing3 = 3;
 
-    // Estado
-    const estadoColor = resuelto ? [16,185,129] : [245,158,11];
-    doc.setFillColor(...estadoColor);
-    doc.roundedRect(ML, y, 28, 6, 1.5, 1.5, 'F');
-    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
-    doc.text(resuelto ? '✓ RESUELTO' : '⏳ PENDIENTE', ML+14, y+4.2, { align:'center' });
-    y += 10;
-
-    // Fecha
-    doc.setTextColor(120,125,145); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
-    doc.text(`Registrado: ${fmtFecha(inc.created_at)}`, ML, y); y += 6;
-
-    // Descripción
-    doc.setTextColor(30,30,30); doc.setFontSize(9);
-    const lines = doc.splitTextToSize(inc.descripcion, CW);
-    newPage(lines.length*6+4);
-    doc.text(lines, ML, y); y += lines.length*6+4;
-
-    // Foto de la incidencia
+    // Ajustamos el tamaño máximo para la foto
     const tieneFoto = !!inc.foto_url && !!imagenesCache[inc.foto_url];
-    if (tieneFoto) {
-      const fotoW = CW * 0.72;
-      const fotoH = 85;
-      newPage(fotoH + 10);
+    let fotoHeight = 0;
+    let pr = null;
 
+    if (tieneFoto) {
       const b64 = imagenesCache[inc.foto_url];
-      const pr  = await calcProps(b64, fotoW, fotoH);
-      doc.addImage(b64, 'JPEG', ML, y, pr.w, pr.h, '', 'FAST');
-      y += pr.h + 8;
+      pr = await calcProps(b64, CW * 0.75, 58); // Máximo ancho 75% del ancho disponible, altura máx 58mm
+      fotoHeight = pr.h + 5; // Altura calculada de la imagen más espacio inferior
     }
 
-    // Separador entre ítems
-    doc.setDrawColor(200,200,200);
-    doc.line(ML, y, ML+CW, y);
+    // Dividir descripción en líneas
+    const lines = doc.splitTextToSize(inc.descripcion, CW);
+    const descH = lines.length * 4.8; // Salto de línea ajustado
+    const spacing4 = 4;
+
+    // Altura total requerida para dibujar esta incidencia completa
+    const totalItemHeight = headerH + spacing1 + badgeH + spacing2 + dateH + spacing3 + descH + spacing4 + fotoHeight + 10;
+
+    // 2. Control de Saltos de Página (Evita desmembramiento y hojas vacías)
+    // Si la incidencia completa cabe en una hoja vacía pero no en el espacio restante de la actual,
+    // forzamos el salto de página en este momento para mantener la estructura unificada.
+    if (y + totalItemHeight > MARGIN_LIMIT) {
+      if (totalItemHeight <= (MARGIN_LIMIT - 25)) {
+        doc.addPage();
+        y = 25; // Reiniciar en la parte superior de la nueva página
+      } else {
+        // En caso extremo de que el texto sea excesivamente largo y supere una página entera por sí solo,
+        // validamos si nos queda poco margen inferior antes de empezar a escribir para no fragmentar el encabezado.
+        if (y + 40 > MARGIN_LIMIT) {
+          doc.addPage();
+          y = 25;
+        }
+      }
+    }
+
+    // 3. Dibujar el bloque de la incidencia
+    // Fondo de encabezado de la tarjeta
+    doc.setFillColor(34, 38, 58);
+    doc.roundedRect(ML, y, CW, headerH, 1.5, 1.5, 'F');
+
+    // Título / Departamento
+    doc.setTextColor(245, 158, 11);
+    doc.setFontSize(9.5); doc.setFont('helvetica', 'bold');
+    doc.text(`#${i + 1}  Depto. ${inc.departamento}`, ML + 3, y + 5.8);
+
+    // Categoría
+    doc.setTextColor(180, 185, 200);
+    doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+    doc.text(inc.categoria.toUpperCase(), ML + CW - 3, y + 5.8, { align: 'right' });
+
+    y += headerH + spacing1;
+
+    // Etiqueta de Estado (Badge Rectangular alineado y texto centrado sin emojis)
+    const estadoColor = resuelto ? [16, 185, 129] : [245, 158, 11];
+    const badgeW = 24;
+    doc.setFillColor(...estadoColor);
+    doc.roundedRect(ML, y, badgeW, badgeH, 1, 1, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+    // Coordenada x centrada (ML + ancho/2) e y balanceado a 3.8mm para centrado óptimo en rect de 5.5mm
+    doc.text(resuelto ? 'RESUELTO' : 'PENDIENTE', ML + (badgeW / 2), y + 3.8, { align: 'center' });
+
+    y += badgeH + spacing2;
+
+    // Fecha
+    doc.setTextColor(120, 125, 145);
+    doc.setFontSize(7.5); doc.setFont('helvetica', 'normal');
+    doc.text(`Registrado: ${fmtFecha(inc.created_at)}`, ML, y);
+
+    y += dateH + spacing3;
+
+    // Descripción del problema
+    doc.setTextColor(30, 30, 30);
+    doc.setFontSize(9);
+    doc.text(lines, ML, y);
+
+    y += descH + spacing4;
+
+    // Renderizar Foto si existe
+    if (tieneFoto && pr) {
+      doc.addImage(imagenesCache[inc.foto_url], 'JPEG', ML, y, pr.w, pr.h, '', 'FAST');
+      y += pr.h + 6;
+    }
+
+    // Línea divisoria
+    doc.setDrawColor(218, 222, 230);
+    doc.setLineWidth(0.25);
+    doc.line(ML, y, ML + CW, y);
     y += 8;
   }
 
-  // Pie de página en todas las hojas
-  const total = doc.getNumberOfPages();
-  for (let p=1; p<=total; p++) {
+  // Renderizar pie de página en cada hoja generada
+  const totalPaginas = doc.getNumberOfPages();
+  for (let p = 1; p <= totalPaginas; p++) {
     doc.setPage(p);
-    doc.setFillColor(26,29,39); doc.rect(0,287,PW,10,'F');
-    doc.setTextColor(120,125,145); doc.setFontSize(7);
+    doc.setFillColor(26, 29, 39); doc.rect(0, 287, PW, 10, 'F');
+    doc.setTextColor(120, 125, 145); doc.setFontSize(7);
     doc.text('Postventa – Registro de Incidencias en Obra', ML, 292);
-    doc.text(`Pág. ${p} / ${total}`, PW-MR, 292, { align:'right' });
+    doc.text(`Pág. ${p} / ${totalPaginas}`, PW - MR, 292, { align: 'right' });
   }
 
   return doc.output('blob');
