@@ -248,31 +248,16 @@ function card(inc) {
       </button>
     </div>` : '';
 
-  const fotoDespues = inc.foto_solucion_url ? `
-    <div class="card-foto-wrap" data-foto="${inc.foto_solucion_url}" data-id="${inc.id}">
-      <span class="foto-label foto-label-ok">DESPUÉS</span>
-      <img class="card-foto-img" src="${inc.foto_solucion_url}" loading="lazy" alt="foto después"/>
-      <button class="btn-del-foto-sol" title="Borrar foto solución">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
-          <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-        </svg>
-      </button>
-    </div>` : '';
-
-  const btnSolucion = !resuelto ? `
-    <button class="btn-add-sol" data-id="${inc.id}" title="Agregar foto solución">
-      ✅ Marcar resuelto + foto
-    </button>` : '';
-
+const btnSolucion = !resuelto
+  ? `<button class="btn-add-sol" data-id="${inc.id}">✅ Marcar como resuelto</button>`
+  : `<button class="btn-des-sol" data-id="${inc.id}">↩ Desmarcar</button>`;
   const estadoBadge = `<span class="badge-estado ${resuelto ? 'badge-ok' : 'badge-pend'}">
     ${resuelto ? '✅ Resuelto' : '⏳ Pendiente'}
   </span>`;
 
-  const fotosWrap = (fotoAntes || fotoDespues) ? `
-    <div class="fotos-grid">
+  const fotosWrap = fotoDespues ? `
+    <div class="fotos-wrap-single">
       ${fotoAntes}
-      ${fotoDespues}
     </div>` : '';
 
   return `
