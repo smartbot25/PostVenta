@@ -172,7 +172,7 @@ formInc.addEventListener('submit', async e => {
 
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    let foto_url = null;
+    let foto_url = null;⁷
 
     if (fotoFile) {
       const ext  = fotoFile.name.split('.').pop();
