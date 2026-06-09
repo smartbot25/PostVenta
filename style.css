@@ -169,13 +169,15 @@ textarea{resize:vertical;min-height:100px;}
 @supports (padding-bottom:env(safe-area-inset-bottom)){
   .tab-content{padding-bottom:env(safe-area-inset-bottom);}
 }
-/* ANTES / DESPUÉS */
-.fotos-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.fotos-grid .card-foto-wrap{position:relative;}
-.foto-label{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.75);color:#f59e0b;font-size:.65rem;font-weight:800;letter-spacing:1px;padding:3px 7px;border-radius:4px;z-index:1;}
-.foto-label-ok{color:#10b981;}
-.btn-add-sol{background:rgba(16,185,129,.1);border:1.5px solid rgba(16,185,129,.4);color:#10b981;border-radius:var(--rs);font-family:var(--font);font-size:.88rem;font-weight:700;padding:12px;width:100%;cursor:pointer;transition:all .15s;}
-.btn-add-sol:active{background:rgba(16,185,129,.25);}
+
+/* ESTADOS */
 .badge-estado{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;border-radius:5px;}
 .badge-pend{background:rgba(245,158,11,.1);color:#f59e0b;}
 .badge-ok{background:rgba(16,185,129,.1);color:#10b981;}
+
+/* BOTÓN DE RESOLUCIÓN DIRECTO */
+.btn-add-sol{background:rgba(16,185,129,.1);border:1.5px solid rgba(16,185,129,.4);color:#10b981;border-radius:var(--rs);font-family:var(--font);font-size:.88rem;font-weight:700;padding:12px;width:100%;cursor:pointer;transition:all .15s;}
+.btn-add-sol:active{background:rgba(16,185,129,.25);}
+
+.btn-des-sol{background:rgba(124,128,153,.1);border:1.5px solid rgba(124,128,153,.4);color:var(--muted);border-radius:var(--rs);font-family:var(--font);font-size:.88rem;font-weight:700;padding:12px;width:100%;cursor:pointer;transition:all .15s;}
+.btn-des-sol:active{background:rgba(124,128,153,.25);}
