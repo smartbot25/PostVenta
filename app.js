@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════
-//  POSTVENTA PWA  –  app.js  VERSIÓN FINAL OPTIMIZADA
+//  POSTVENTA PWA  –  app.js  VERSIÓN OPTIMIZADA
 // ═══════════════════════════════════════════════════
 const SUPABASE_URL = 'https://wwcryoazawtgsrwodbmd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3Y3J5b2F6YXd0Z3Nyd29kYm1kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NDQ3NzcsImV4cCI6MjA5NDAyMDc3N30.drxsBxR7ri0Nve5C3dMsTNzog4nz0ktGdFsoaBNpHtg';
@@ -35,7 +35,6 @@ const fotoInput    = $('foto-input');
 const fotoArea     = $('foto-area');
 const fotoPreview  = $('foto-preview');
 const fotoPH       = $('foto-placeholder');
-const fotoSolInput = $('foto-sol-input');
 const btnCamara    = $('btn-camara');
 const btnGaleria   = $('btn-galeria');
 const btnQuitarF   = $('btn-quitar-foto');
@@ -172,7 +171,7 @@ formInc.addEventListener('submit', async e => {
 
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    let foto_url = null;⁷
+    let foto_url = null;
 
     if (fotoFile) {
       const ext  = fotoFile.name.split('.').pop();
@@ -186,7 +185,7 @@ formInc.addEventListener('submit', async e => {
 
     const { error } = await supabase.from('incidencias').insert({
       departamento: dep, categoria: cat, descripcion: desc,
-      foto_url, user_id: user.id
+      foto_url, user_id: user.id, estado: 'pendiente'
     });
     if (error) throw error;
 
@@ -236,10 +235,9 @@ function card(inc) {
 
   const resuelto = inc.estado === 'resuelto';
 
-  const fotoAntes = inc.foto_url ? `
+  const fotoHtml = inc.foto_url ? `
     <div class="card-foto-wrap" data-foto="${inc.foto_url}" data-id="${inc.id}">
-      <span class="foto-label">ANTES</span>
-      <img class="card-foto-img" src="${inc.foto_url}" loading="lazy" alt="foto antes"/>
+      <img class="card-foto-img" src="${inc.foto_url}" loading="lazy" alt="foto de la incidencia"/>
       <button class="btn-del-foto" title="Borrar foto">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
@@ -248,20 +246,16 @@ function card(inc) {
       </button>
     </div>` : '';
 
-const btnSolucion = !resuelto
-  ? `<button class="btn-add-sol" data-id="${inc.id}">✅ Marcar como resuelto</button>`
-  : `<button class="btn-des-sol" data-id="${inc.id}">↩ Desmarcar</button>`;
+  const btnSolucion = !resuelto
+    ? `<button class="btn-add-sol" data-id="${inc.id}">✅ Marcar como resuelto</button>`
+    : `<button class="btn-des-sol" data-id="${inc.id}">↩ Desmarcar</button>`;
+
   const estadoBadge = `<span class="badge-estado ${resuelto ? 'badge-ok' : 'badge-pend'}">
     ${resuelto ? '✅ Resuelto' : '⏳ Pendiente'}
   </span>`;
 
-  const fotosWrap = fotoDespues ? `
-    <div class="fotos-wrap-single">
-      ${fotoAntes}
-    </div>` : '';
-
   return `
-  <div class="inc-card" id="card-${inc.id}" data-id="${inc.id}" data-foto="${inc.foto_url || ''}" data-foto-sol="${inc.foto_solucion_url || ''}">
+  <div class="inc-card" id="card-${inc.id}" data-id="${inc.id}" data-foto="${inc.foto_url || ''}">
     <div class="inc-top">
       <div class="inc-tags">
         <span class="tag-depto">Depto ${esc(inc.departamento)}</span>
@@ -276,7 +270,7 @@ const btnSolucion = !resuelto
       </button>
     </div>
     <p class="inc-desc">${esc(inc.descripcion)}</p>
-    ${fotosWrap}
+    ${fotoHtml}
     ${btnSolucion}
     <span class="inc-fecha">${fecha}</span>
   </div>`;
@@ -311,20 +305,13 @@ listaCards.addEventListener('click', e => {
   const bSol = e.target.closest('.btn-add-sol');
   if (bSol) {
     e.stopPropagation();
-    const incId = bSol.dataset.id;
-    abrirSelectorFotoSolucion(incId);
+    marcarResuelto(bSol.dataset.id);
     return;
   }
-  const bFotoSol = e.target.closest('.btn-del-foto-sol');
-  if (bFotoSol) {
+  const bDesSol = e.target.closest('.btn-des-sol');
+  if (bDesSol) {
     e.stopPropagation();
-    const w = bFotoSol.closest('.card-foto-wrap');
-    abrirConfirm(
-      '¿Borrar foto solución?',
-      'Se elimina la foto de "después" y la incidencia vuelve a Pendiente.',
-      'Sí, borrar',
-      () => borrarFotoSolucion(w.dataset.id, w.dataset.foto)
-    );
+    desmarcarResuelto(bDesSol.dataset.id);
     return;
   }
   const img = e.target.closest('.card-foto-img');
@@ -460,7 +447,6 @@ btnEnviarWA.addEventListener('click', async () => {
   toast('Cargando imágenes…');
 
   try {
-    // PRE-CARGAR TODAS LAS IMÁGENES ANTES DE GENERAR EL PDF
     toast('Preparando fotos…');
     const imagenesCache = await precargarImagenes(items);
 
@@ -492,7 +478,7 @@ btnEnviarWA.addEventListener('click', async () => {
   }
 });
 
-// ── PRE-CARGA DE IMÁGENES (resuelve TODAS antes de tocar jsPDF) ──
+// ── PRE-CARGA DE IMÁGENES ─────────────────────────
 async function precargarImagenes(items) {
   const cache = {};
   const promesas = [];
@@ -505,16 +491,8 @@ async function precargarImagenes(items) {
           .catch(() => { cache[inc.foto_url] = null; })
       );
     }
-    if (inc.foto_solucion_url) {
-      promesas.push(
-        urlABase64(inc.foto_solucion_url)
-          .then(b64 => { cache[inc.foto_solucion_url] = b64; })
-          .catch(() => { cache[inc.foto_solucion_url] = null; })
-      );
-    }
   }
 
-  // Espera a que TODAS las imágenes terminen (éxito o error)
   await Promise.allSettled(promesas);
   return cache;
 }
@@ -535,7 +513,6 @@ function urlABase64(url) {
     };
 
     img.onerror = () => {
-      // Segundo intento sin crossOrigin (fallback)
       const img2 = new Image();
       img2.onload = () => {
         const canvas = document.createElement('canvas');
@@ -552,7 +529,7 @@ function urlABase64(url) {
     img.src = url + '?t=' + Date.now();
   });
 }
-// Mantiene proporciones correctas
+
 function calcProps(b64, maxW, maxH) {
   return new Promise(resolve => {
     const img = new Image();
@@ -569,7 +546,7 @@ function calcProps(b64, maxW, maxH) {
   });
 }
 
-// ── GENERAR PDF (retorna Blob) ────────────────────
+// ── GENERAR PDF ───────────────────────────────────
 async function generarPDFBlob(items, desde, hasta, imagenesCache) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -624,35 +601,27 @@ async function generarPDFBlob(items, desde, hasta, imagenesCache) {
     const lines = doc.splitTextToSize(inc.descripcion, CW);
     newPage(lines.length*6+4);
     doc.text(lines, ML, y); y += lines.length*6+4;
-    // PONER:
-const tieneAntes = !!inc.foto_url && !!imagenesCache[inc.foto_url];
 
-if (tieneAntes) {
-  const fotoW = CW * 0.72;
-  const fotoH = 85;
-  newPage(fotoH + 20);
+    // Foto de la incidencia
+    const tieneFoto = !!inc.foto_url && !!imagenesCache[inc.foto_url];
+    if (tieneFoto) {
+      const fotoW = CW * 0.72;
+      const fotoH = 85;
+      newPage(fotoH + 10);
 
-  const b64 = imagenesCache[inc.foto_url];
-  const pr  = await calcProps(b64, fotoW, fotoH);
-  doc.addImage(b64, 'JPEG', ML, y, pr.w, pr.h, '', 'FAST');
-  y += pr.h + 5;
+      const b64 = imagenesCache[inc.foto_url];
+      const pr  = await calcProps(b64, fotoW, fotoH);
+      doc.addImage(b64, 'JPEG', ML, y, pr.w, pr.h, '', 'FAST');
+      y += pr.h + 8;
+    }
 
-  // Badge estado debajo de la foto
-  const resColor = resuelto ? [16,185,129] : [245,158,11];
-  doc.setFillColor(...resColor);
-  doc.roundedRect(ML, y, 32, 6, 1.5, 1.5, 'F');
-  doc.setTextColor(resuelto ? 255 : 0, resuelto ? 255 : 0, resuelto ? 255 : 0);
-  doc.setFontSize(7); doc.setFont('helvetica','bold');
-  doc.text(resuelto ? '✓ RESUELTO' : '⏳ PENDIENTE', ML + 16, y + 4.2, { align: 'center' });
-  y += 10;
-}
-    // Separador
-    doc.setDrawColor(46,50,72);
+    // Separador entre ítems
+    doc.setDrawColor(200,200,200);
     doc.line(ML, y, ML+CW, y);
     y += 8;
   }
 
-  // Footer
+  // Pie de página en todas las hojas
   const total = doc.getNumberOfPages();
   for (let p=1; p<=total; p++) {
     doc.setPage(p);
