@@ -1,434 +1,521 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+  <meta name="theme-color" content="#1a1a2e"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Postventa"/>
 
-    <meta name="theme-color" content="#2563eb">
-    <meta name="description" content="Aplicación local para registrar incidencias de postventa">
-    <meta name="author" content="Edgar Pinedo">
+  <title>Postventa</title>
 
-    <title>PostVenta</title>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="apple-touch-icon" href="icons/icon-192.png"/>
+  <link rel="stylesheet" href="style.css"/>
 
-    <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css">
-
-    <link rel="apple-touch-icon" href="icons/icon-192.png">
-
-    <!-- jsPDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 
 <body>
 
-    <!-- =========================
-         APLICACIÓN
-    ========================== -->
+<div id="screen-app" class="screen active">
 
-    <div id="screen-app" class="screen active">
+  <header class="app-header">
 
-        <header>
-            <div class="container">
+    <div class="header-left">
 
-                <div class="header-left">
-                    <h1>PostVenta</h1>
-                    <p>Registro de incidencias</p>
-                </div>
+      <span class="header-icon">🏢</span>
 
-                <div class="header-right">
-                    <span id="user-badge" class="user-badge">📱 Local</span>
-                </div>
+      <span class="header-title">
+        Postventa
+      </span>
 
-            </div>
-        </header>
+    </div>
 
+  </header>
 
-        <!-- =========================
-             TABS
-        ========================== -->
 
-        <div class="container">
+  <nav class="tab-bar">
 
-            <div class="tabs">
-                <button class="tab active" data-tab="nueva">
-                    Nueva incidencia
-                </button>
+    <button
+      class="tab active"
+      data-tab="nueva"
+    >
+      ＋ Nueva
+    </button>
 
-                <button class="tab" data-tab="historial">
-                    Historial
-                </button>
-            </div>
+    <button
+      class="tab"
+      data-tab="lista"
+    >
+      📋 Historial
+    </button>
 
+  </nav>
 
-            <!-- =========================
-                 NUEVA INCIDENCIA
-            ========================== -->
 
-            <section id="tab-nueva" class="tab-content active">
+  <div
+    id="tab-nueva"
+    class="tab-content active"
+  >
 
-                <form id="form-inc">
+    <form
+      id="form-incidencia"
+      novalidate
+    >
 
-                    <div class="form-group">
-                        <label for="inp-depto">Departamento</label>
+      <div class="field-group">
 
-                        <input
-                            type="text"
-                            id="inp-depto"
-                            placeholder="Ej. 308"
-                            autocomplete="off"
-                            required
-                        >
-                    </div>
+        <label for="departamento">
+          Nro de Departamento *
+        </label>
 
+        <input
+          type="text"
+          id="departamento"
+          placeholder="Ej: 401-B, Torre C Piso 3"
+          required
+        />
 
-                    <div class="form-group">
-                        <label for="inp-cat">Categoría</label>
+      </div>
 
-                        <select id="inp-cat" required>
 
-                            <option value="">
-                                Seleccionar categoría
-                            </option>
+      <div class="field-group">
 
-                            <option value="Fisuras">
-                                Fisuras
-                            </option>
+        <label for="categoria">
+          Categoría *
+        </label>
 
-                            <option value="Humedad">
-                                Humedad
-                            </option>
+        <select
+          id="categoria"
+          required
+        >
 
-                            <option value="Filtración">
-                                Filtración
-                            </option>
+          <option value="">
+            — Seleccionar —
+          </option>
 
-                            <option value="Acabados">
-                                Acabados
-                            </option>
+          <option value="Acabados">
+            Acabados
+          </option>
 
-                            <option value="Pintura">
-                                Pintura
-                            </option>
+          <option value="Carpintería">
+            Carpintería
+          </option>
 
-                            <option value="Puertas">
-                                Puertas
-                            </option>
+          <option value="Cerámica / Pisos">
+            Cerámica / Pisos
+          </option>
 
-                            <option value="Ventanas">
-                                Ventanas
-                            </option>
+          <option value="Electricidad">
+            Electricidad
+          </option>
 
-                            <option value="Instalaciones eléctricas">
-                                Instalaciones eléctricas
-                            </option>
+          <option value="Filtraciones / Humedad">
+            Filtraciones / Humedad
+          </option>
 
-                            <option value="Instalaciones sanitarias">
-                                Instalaciones sanitarias
-                            </option>
+          <option value="Pintura">
+            Pintura
+          </option>
 
-                            <option value="Otros">
-                                Otros
-                            </option>
+          <option value="Sanitarios / Gasfitería">
+            Sanitarios / Gasfitería
+          </option>
 
-                        </select>
-                    </div>
+          <option value="Ventanas / Puertas">
+            Ventanas / Puertas
+          </option>
 
+          <option value="Otros">
+            Otros
+          </option>
 
-                    <div class="form-group">
-                        <label for="inp-desc">Descripción</label>
+        </select>
 
-                        <textarea
-                            id="inp-desc"
-                            rows="5"
-                            placeholder="Describe la incidencia..."
-                            required
-                        ></textarea>
-                    </div>
+      </div>
 
 
-                    <!-- =========================
-                         FOTOS
-                    ========================== -->
+      <div class="field-group">
 
-                    <div class="form-group">
+        <label for="descripcion">
+          Descripción *
+        </label>
 
-                        <label>Fotos</label>
+        <textarea
+          id="descripcion"
+          rows="4"
+          placeholder="Describe el problema con detalle…"
+          required
+        ></textarea>
 
-                        <div id="foto-area" class="foto-area">
+      </div>
 
-                            <div id="foto-preview" class="foto-preview"></div>
 
-                            <div id="foto-ph" class="foto-placeholder">
-                                <span>📷</span>
-                                <p>Selecciona una o varias fotos</p>
-                            </div>
+      <div class="field-group">
 
-                        </div>
+        <label>
+          Fotos de evidencia
+        </label>
 
+        <!--
+          CAMBIO:
+          Ahora se permiten varias fotografías.
+        -->
 
-                        <div class="foto-buttons">
+        <input
+          type="file"
+          id="foto-input"
+          accept="image/*"
+          class="hidden"
+          multiple
+        />
 
-                            <!-- CÁMARA -->
-                            <button
-                                type="button"
-                                id="btn-camara"
-                                class="btn-secondary"
-                            >
-                                📷 Cámara
-                            </button>
+        <div
+          id="foto-area"
+          class="foto-area"
+        >
 
+          <div
+            id="foto-placeholder"
+            class="foto-placeholder"
+          >
 
-                            <!-- GALERÍA -->
-                            <button
-                                type="button"
-                                id="btn-galeria"
-                                class="btn-secondary"
-                            >
-                                🖼️ Galería
-                            </button>
+            <span class="foto-icon">
+              📷
+            </span>
 
-                        </div>
+            <span>
+              Toca para seleccionar fotos
+            </span>
 
+          </div>
 
-                        <!--
-                            IMPORTANTE:
-                            multiple permite seleccionar
-                            varias fotos de una sola vez.
-                        -->
 
-                        <input
-                            type="file"
-                            id="foto-input"
-                            accept="image/*"
-                            multiple
-                            hidden
-                        >
+          <!--
+            Antes era un <img>.
+            Ahora es un contenedor para
+            mostrar varias miniaturas.
+          -->
 
-                    </div>
-
-
-                    <button
-                        type="submit"
-                        id="btn-submit"
-                        class="btn-primary"
-                    >
-                        <span id="submit-text">
-                            Registrar incidencia
-                        </span>
-
-                        <span id="submit-loader" hidden>
-                            Guardando...
-                        </span>
-                    </button>
-
-                </form>
-
-            </section>
-
-
-            <!-- =========================
-                 HISTORIAL
-            ========================== -->
-
-            <section
-                id="tab-historial"
-                class="tab-content"
-            >
-
-                <div class="history-toolbar">
-
-                    <input
-                        type="search"
-                        id="buscador"
-                        placeholder="Buscar incidencia..."
-                    >
-
-                    <button
-                        type="button"
-                        id="btn-reporte"
-                        class="btn-primary"
-                    >
-                        📄 Reporte
-                    </button>
-
-                </div>
-
-
-                <div id="lista-cards"></div>
-
-            </section>
+          <div
+            id="foto-preview"
+            class="hidden"
+            style="
+              display:grid;
+              grid-template-columns:repeat(3,1fr);
+              gap:8px;
+              padding:8px;
+            "
+          ></div>
 
         </div>
+
+
+        <div class="foto-actions">
+
+          <button
+            type="button"
+            class="btn-sec"
+            id="btn-camara"
+          >
+            📷 Cámara
+          </button>
+
+          <button
+            type="button"
+            class="btn-sec"
+            id="btn-galeria"
+          >
+            🖼️ Galería
+          </button>
+
+          <button
+            type="button"
+            class="btn-quitar hidden"
+            id="btn-quitar-foto"
+          >
+            ✕ Quitar todas
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <button
+        type="submit"
+        class="btn-primary btn-submit"
+        id="btn-submit"
+      >
+
+        <span id="submit-text">
+          Registrar Incidencia
+        </span>
+
+        <span
+          id="submit-loader"
+          class="loader hidden"
+        ></span>
+
+      </button>
+
+    </form>
+
+
+    <div
+      id="modal-ok"
+      class="modal hidden"
+    >
+
+      <div
+        class="modal-box modal-ok-box"
+      >
+
+        <div class="modal-icon">
+          ✅
+        </div>
+
+        <h2>
+          ¡Registrada!
+        </h2>
+
+        <p id="modal-ok-msg"></p>
+
+        <button
+          class="btn-primary"
+          id="btn-modal-ok"
+        >
+          Nueva incidencia
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <div
+    id="tab-lista"
+    class="tab-content"
+  >
+
+    <div class="lista-toolbar">
+
+      <input
+        type="search"
+        id="buscador"
+        placeholder="🔍 Buscar por depto, categoría…"
+        class="buscador"
+      />
+
+
+      <button
+        class="btn-reporte"
+        id="btn-reporte"
+      >
+
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+
+          <path
+            d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+          />
+
+          <polyline
+            points="14 2 14 8 20 8"
+          />
+
+          <line
+            x1="12"
+            y1="18"
+            x2="12"
+            y2="12"
+          />
+
+          <line
+            x1="9"
+            y1="15"
+            x2="15"
+            y2="15"
+          />
+
+        </svg>
+
+        Enviar Reporte
+
+      </button>
 
     </div>
 
 
-    <!-- =========================
-         MODAL ÉXITO
-    ========================== -->
+    <div
+      id="lista-cards"
+      class="lista-cards"
+    >
 
-    <div id="modal-ok" class="modal">
+      <div class="empty-state">
 
-        <div class="modal-content">
+        <span>
+          📋
+        </span>
 
-            <h2>¡Guardado!</h2>
+        <p>
+          Cargando historial…
+        </p>
 
-            <p id="modal-ok-msg">
-                La incidencia fue registrada correctamente.
-            </p>
+      </div>
 
-            <button
-                type="button"
-                id="btn-modal-ok"
-                class="btn-primary"
-            >
-                Aceptar
-            </button>
+    </div>
 
-        </div>
+  </div>
+
+</div>
+
+
+<div
+  id="modal-reporte"
+  class="modal hidden"
+>
+
+  <div class="modal-box">
+
+    <div class="modal-icon">
+      📄
+    </div>
+
+    <h2>
+      Enviar Reporte
+    </h2>
+
+    <p>
+      Selecciona el rango de fechas
+    </p>
+
+
+    <div class="rango-fechas">
+
+      <div class="field-group">
+
+        <label for="fecha-desde">
+          Desde
+        </label>
+
+        <input
+          type="date"
+          id="fecha-desde"
+        />
+
+      </div>
+
+
+      <div class="field-group">
+
+        <label for="fecha-hasta">
+          Hasta
+        </label>
+
+        <input
+          type="date"
+          id="fecha-hasta"
+        />
+
+      </div>
 
     </div>
 
 
-    <!-- =========================
-         MODAL REPORTE
-    ========================== -->
+    <div class="reporte-btns">
 
-    <div id="modal-reporte" class="modal">
-
-        <div class="modal-content">
-
-            <h2>Generar reporte</h2>
-
-            <div class="form-group">
-
-                <label for="fecha-desde">
-                    Desde
-                </label>
-
-                <input
-                    type="date"
-                    id="fecha-desde"
-                >
-
-            </div>
+      <button
+        class="btn-sec"
+        id="btn-cancelar-reporte"
+      >
+        Cancelar
+      </button>
 
 
-            <div class="form-group">
+      <button
+        class="btn-wa"
+        id="btn-enviar-wa"
+      >
 
-                <label for="fecha-hasta">
-                    Hasta
-                </label>
+        Generar PDF y WhatsApp
 
-                <input
-                    type="date"
-                    id="fecha-hasta"
-                >
+        <span
+          id="wa-loader"
+          class="loader loader-white hidden"
+        ></span>
 
-            </div>
-
-
-            <div class="modal-buttons">
-
-                <button
-                    type="button"
-                    id="btn-cancel-rep"
-                    class="btn-secondary"
-                >
-                    Cancelar
-                </button>
-
-                <button
-                    type="button"
-                    id="btn-enviar-wa"
-                    class="btn-primary"
-                >
-                    📄 Generar PDF
-                </button>
-
-            </div>
-
-        </div>
+      </button>
 
     </div>
 
+  </div>
 
-    <!-- =========================
-         MODAL CONFIRMACIÓN
-    ========================== -->
+</div>
 
-    <div id="modal-conf" class="modal">
 
-        <div class="modal-content">
+<div
+  id="modal-confirmar"
+  class="modal hidden"
+>
 
-            <h2 id="conf-titulo">
-                Confirmar
-            </h2>
+  <div
+    class="modal-box modal-danger-box"
+  >
 
-            <p id="conf-msg">
-                ¿Deseas continuar?
-            </p>
+    <div class="modal-icon">
+      ⚠️
+    </div>
 
-            <div class="modal-buttons">
+    <h3 id="confirm-titulo"></h3>
 
-                <button
-                    type="button"
-                    id="btn-conf-cancel"
-                    class="btn-secondary"
-                >
-                    Cancelar
-                </button>
+    <p id="confirm-msg"></p>
 
-                <button
-                    type="button"
-                    id="btn-conf-ok"
-                    class="btn-primary"
-                >
-                    Confirmar
-                </button>
 
-            </div>
+    <div class="reporte-btns">
 
-        </div>
+      <button
+        class="btn-sec"
+        id="btn-conf-cancel"
+      >
+        Cancelar
+      </button>
+
+      <button
+        class="btn-danger"
+        id="btn-conf-ok"
+      ></button>
 
     </div>
 
+  </div>
 
-    <!-- =========================
-         TOAST
-    ========================== -->
-
-    <div id="toast"></div>
+</div>
 
 
-    <!-- =========================
-         JAVASCRIPT
-    ========================== -->
+<div
+  id="toast"
+  class="toast hidden"
+></div>
 
-    <script src="app.js?v=3"></script>
 
-
-    <!-- SERVICE WORKER -->
-
-    <script>
-
-        if ("serviceWorker" in navigator) {
-
-            window.addEventListener("load", () => {
-
-                navigator.serviceWorker.register("sw.js")
-                    .catch(error => {
-                        console.error(
-                            "Error registrando Service Worker:",
-                            error
-                        );
-                    });
-
-            });
-
-        }
-
-    </script>
+<script
+  type="module"
+  src="app.js?v=4"
+></script>
 
 </body>
 </html>
