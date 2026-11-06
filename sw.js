@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════
-//  POSTVENTA PWA – Service Worker FINAL
+//  POSTVENTA PWA – Service Worker v4
 // ═══════════════════════════════════════
-const CACHE = 'postventa-v3';
+const CACHE = 'postventa-v4';
 const SHELL = [
   './index.html',
   './style.css',
@@ -31,10 +31,9 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Fetch: Supabase siempre en red; resto cache-first
+// Fetch: Supabase (si hubiera) o CDN de jsPDF siempre en red; resto cache-first
 self.addEventListener('fetch', e => {
   const url = e.request.url;
-  // No cachear Supabase ni CDN de jsPDF
   if (url.includes('supabase.co') || url.includes('supabase.io') || url.includes('cdnjs.cloudflare.com')) {
     e.respondWith(fetch(e.request));
     return;
