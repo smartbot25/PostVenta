@@ -23,499 +23,198 @@
 <div id="screen-app" class="screen active">
 
   <header class="app-header">
-
     <div class="header-left">
-
       <span class="header-icon">🏢</span>
-
-      <span class="header-title">
-        Postventa
-      </span>
-
+      <span class="header-title">Postventa</span>
     </div>
-
+    <div class="header-right">
+      <button class="btn-icon" id="btn-menu-respaldo" title="Respaldo de datos">💾</button>
+    </div>
   </header>
 
-
   <nav class="tab-bar">
-
-    <button
-      class="tab active"
-      data-tab="nueva"
-    >
-      ＋ Nueva
-    </button>
-
-    <button
-      class="tab"
-      data-tab="lista"
-    >
-      📋 Historial
-    </button>
-
+    <button class="tab active" data-tab="nueva">＋ Nueva</button>
+    <button class="tab" data-tab="lista">📋 Historial</button>
   </nav>
 
+  <!-- TAB NUEVA -->
+  <div id="tab-nueva" class="tab-content active">
+    <form id="form-incidencia" novalidate>
 
-  <div
-    id="tab-nueva"
-    class="tab-content active"
-  >
-
-    <form
-      id="form-incidencia"
-      novalidate
-    >
-
-      <div class="field-group">
-
-        <label for="departamento">
-          Nro de Departamento *
-        </label>
-
-        <input
-          type="text"
-          id="departamento"
-          placeholder="Ej: 401-B, Torre C Piso 3"
-          required
-        />
-
+      <!-- CAMPO PROYECTO OBLIGATORIO -->
+      <div class="field-group autocomplete-wrap">
+        <label for="proyecto">Proyecto *</label>
+        <input type="text" id="proyecto" placeholder="Ej: Mirasol I Etapa, Torre Norte…" list="lista-proyectos" required autocomplete="off"/>
+        <datalist id="lista-proyectos"></datalist>
       </div>
 
+      <div class="field-group">
+        <label for="departamento">Nro de Departamento *</label>
+        <input type="text" id="departamento" placeholder="Ej: 401-B, Casa 12" required/>
+      </div>
 
       <div class="field-group">
-
-        <label for="categoria">
-          Categoría *
-        </label>
-
-        <select
-          id="categoria"
-          required
-        >
-
-          <option value="">
-            — Seleccionar —
-          </option>
-
-          <option value="Acabados">
-            Acabados
-          </option>
-
-          <option value="Carpintería">
-            Carpintería
-          </option>
-
-          <option value="Cerámica / Pisos">
-            Cerámica / Pisos
-          </option>
-
-          <option value="Electricidad">
-            Electricidad
-          </option>
-
-          <option value="Filtraciones / Humedad">
-            Filtraciones / Humedad
-          </option>
-
-          <option value="Pintura">
-            Pintura
-          </option>
-
-          <option value="Sanitarios / Gasfitería">
-            Sanitarios / Gasfitería
-          </option>
-
-          <option value="Ventanas / Puertas">
-            Ventanas / Puertas
-          </option>
-
-          <option value="Otros">
-            Otros
-          </option>
-
+        <label for="categoria">Categoría *</label>
+        <select id="categoria" required>
+          <option value="">— Seleccionar —</option>
+          <option value="Acabados">Acabados</option>
+          <option value="Carpintería">Carpintería</option>
+          <option value="Cerámica / Pisos">Cerámica / Pisos</option>
+          <option value="Electricidad">Electricidad</option>
+          <option value="Filtraciones / Humedad">Filtraciones / Humedad</option>
+          <option value="Pintura">Pintura</option>
+          <option value="Sanitarios / Gasfitería">Sanitarios / Gasfitería</option>
+          <option value="Ventanas / Puertas">Ventanas / Puertas</option>
+          <option value="Otros">Otros</option>
         </select>
-
       </div>
 
-
       <div class="field-group">
-
-        <label for="descripcion">
-          Descripción *
-        </label>
-
-        <textarea
-          id="descripcion"
-          rows="4"
-          placeholder="Describe el problema con detalle…"
-          required
-        ></textarea>
-
+        <label for="descripcion">Descripción *</label>
+        <textarea id="descripcion" rows="4" placeholder="Describe el problema con detalle…" required></textarea>
       </div>
 
-
       <div class="field-group">
-
-        <label>
-          Fotos de evidencia
-        </label>
-
-        <!--
-          CAMBIO:
-          Ahora se permiten varias fotografías.
-        -->
-
-        <input
-          type="file"
-          id="foto-input"
-          accept="image/*"
-          class="hidden"
-          multiple
-        />
-
-        <div
-          id="foto-area"
-          class="foto-area"
-        >
-
-          <div
-            id="foto-placeholder"
-            class="foto-placeholder"
-          >
-
-            <span class="foto-icon">
-              📷
-            </span>
-
-            <span>
-              Toca para seleccionar fotos
-            </span>
-
+        <label>Fotos de evidencia (Antes)</label>
+        <input type="file" id="foto-input" accept="image/*" class="hidden" multiple/>
+        <div id="foto-area" class="foto-area">
+          <div id="foto-placeholder" class="foto-placeholder">
+            <span class="foto-icon">📷</span>
+            <span>Toca para seleccionar fotos</span>
           </div>
-
-
-          <!--
-            Antes era un <img>.
-            Ahora es un contenedor para
-            mostrar varias miniaturas.
-          -->
-
-          <div
-            id="foto-preview"
-            class="hidden"
-            style="
-              display:grid;
-              grid-template-columns:repeat(3,1fr);
-              gap:8px;
-              padding:8px;
-            "
-          ></div>
-
+          <div id="foto-preview" class="hidden" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px;"></div>
         </div>
-
-
         <div class="foto-actions">
-
-          <button
-            type="button"
-            class="btn-sec"
-            id="btn-camara"
-          >
-            📷 Cámara
-          </button>
-
-          <button
-            type="button"
-            class="btn-sec"
-            id="btn-galeria"
-          >
-            🖼️ Galería
-          </button>
-
-          <button
-            type="button"
-            class="btn-quitar hidden"
-            id="btn-quitar-foto"
-          >
-            ✕ Quitar todas
-          </button>
-
+          <button type="button" class="btn-sec" id="btn-camara">📷 Cámara</button>
+          <button type="button" class="btn-sec" id="btn-galeria">🖼️ Galería</button>
+          <button type="button" class="btn-quitar hidden" id="btn-quitar-foto">✕ Quitar todas</button>
         </div>
-
       </div>
 
-
-      <button
-        type="submit"
-        class="btn-primary btn-submit"
-        id="btn-submit"
-      >
-
-        <span id="submit-text">
-          Registrar Incidencia
-        </span>
-
-        <span
-          id="submit-loader"
-          class="loader hidden"
-        ></span>
-
+      <button type="submit" class="btn-primary btn-submit" id="btn-submit">
+        <span id="submit-text">Registrar Incidencia</span>
+        <span id="submit-loader" class="loader hidden"></span>
       </button>
-
     </form>
 
-
-    <div
-      id="modal-ok"
-      class="modal hidden"
-    >
-
-      <div
-        class="modal-box modal-ok-box"
-      >
-
-        <div class="modal-icon">
-          ✅
-        </div>
-
-        <h2>
-          ¡Registrada!
-        </h2>
-
+    <div id="modal-ok" class="modal hidden">
+      <div class="modal-box modal-ok-box">
+        <div class="modal-icon">✅</div>
+        <h2>¡Registrada!</h2>
         <p id="modal-ok-msg"></p>
-
-        <button
-          class="btn-primary"
-          id="btn-modal-ok"
-        >
-          Nueva incidencia
-        </button>
-
+        <button class="btn-primary" id="btn-modal-ok">Nueva incidencia</button>
       </div>
-
     </div>
-
   </div>
 
-
-  <div
-    id="tab-lista"
-    class="tab-content"
-  >
-
+  <!-- TAB HISTORIAL -->
+  <div id="tab-lista" class="tab-content">
     <div class="lista-toolbar">
-
-      <input
-        type="search"
-        id="buscador"
-        placeholder="🔍 Buscar por depto, categoría…"
-        class="buscador"
-      />
-
-
-      <button
-        class="btn-reporte"
-        id="btn-reporte"
-      >
-
-        <svg
-          width="15"
-          height="15"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-
-          <path
-            d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-          />
-
-          <polyline
-            points="14 2 14 8 20 8"
-          />
-
-          <line
-            x1="12"
-            y1="18"
-            x2="12"
-            y2="12"
-          />
-
-          <line
-            x1="9"
-            y1="15"
-            x2="15"
-            y2="15"
-          />
-
+      <div class="filtros-row">
+        <select id="filtro-proyecto">
+          <option value="">📂 Todos los proyectos</option>
+        </select>
+        <select id="filtro-estado">
+          <option value="">🏷️ Todos los estados</option>
+          <option value="pendiente">⏳ Pendientes</option>
+          <option value="resuelto">✅ Resueltos</option>
+        </select>
+      </div>
+      <input type="search" id="buscador" placeholder="🔍 Buscar por depto, categoría o descripción…" class="buscador"/>
+      <button class="btn-reporte" id="btn-reporte">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="12" y1="18" x2="12" y2="12"/>
+          <line x1="9" y1="15" x2="15" y2="15"/>
         </svg>
-
-        Enviar Reporte
-
+        Enviar Reporte PDF
       </button>
-
     </div>
 
-
-    <div
-      id="lista-cards"
-      class="lista-cards"
-    >
-
+    <div id="lista-cards" class="lista-cards">
       <div class="empty-state">
-
-        <span>
-          📋
-        </span>
-
-        <p>
-          Cargando historial…
-        </p>
-
+        <span>📋</span>
+        <p>Cargando historial…</p>
       </div>
-
     </div>
-
   </div>
 
 </div>
 
+<!-- INPUT INVISIBLE PARA TOMAR FOTO DE "DESPUÉS" -->
+<input type="file" id="input-foto-despues" accept="image/*" capture="environment" class="hidden"/>
 
-<div
-  id="modal-reporte"
-  class="modal hidden"
->
-
+<!-- MODAL REPORTE -->
+<div id="modal-reporte" class="modal hidden">
   <div class="modal-box">
-
-    <div class="modal-icon">
-      📄
-    </div>
-
-    <h2>
-      Enviar Reporte
-    </h2>
-
-    <p>
-      Selecciona el rango de fechas
-    </p>
-
-
+    <div class="modal-icon">📄</div>
+    <h2>Enviar Reporte</h2>
+    <p>Selecciona el rango de fechas</p>
     <div class="rango-fechas">
-
       <div class="field-group">
-
-        <label for="fecha-desde">
-          Desde
-        </label>
-
-        <input
-          type="date"
-          id="fecha-desde"
-        />
-
+        <label for="fecha-desde">Desde</label>
+        <input type="date" id="fecha-desde"/>
       </div>
-
-
       <div class="field-group">
-
-        <label for="fecha-hasta">
-          Hasta
-        </label>
-
-        <input
-          type="date"
-          id="fecha-hasta"
-        />
-
+        <label for="fecha-hasta">Hasta</label>
+        <input type="date" id="fecha-hasta"/>
       </div>
-
     </div>
-
-
     <div class="reporte-btns">
-
-      <button
-        class="btn-sec"
-        id="btn-cancelar-reporte"
-      >
-        Cancelar
-      </button>
-
-
-      <button
-        class="btn-wa"
-        id="btn-enviar-wa"
-      >
-
+      <button class="btn-sec" id="btn-cancelar-reporte">Cancelar</button>
+      <button class="btn-wa" id="btn-enviar-wa">
         Generar PDF y WhatsApp
-
-        <span
-          id="wa-loader"
-          class="loader loader-white hidden"
-        ></span>
-
+        <span id="wa-loader" class="loader loader-white hidden"></span>
       </button>
-
     </div>
-
   </div>
-
 </div>
 
-
-<div
-  id="modal-confirmar"
-  class="modal hidden"
->
-
-  <div
-    class="modal-box modal-danger-box"
-  >
-
-    <div class="modal-icon">
-      ⚠️
+<!-- MODAL RESPALDO -->
+<div id="modal-respaldo" class="modal hidden">
+  <div class="modal-box" style="border-color: var(--accent);">
+    <div class="modal-icon">💾</div>
+    <h3>Respaldo de Datos</h3>
+    <p>Exporta o importa toda tu base de datos local y fotos entre dispositivos.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;width:100%;margin-top:10px;">
+      <button class="btn-primary" id="btn-exportar-respaldo">📥 Exportar Respaldo (.json)</button>
+      <button class="btn-sec" id="btn-importar-respaldo">📤 Importar Respaldo</button>
+      <input type="file" id="input-archivo-respaldo" accept=".json" class="hidden"/>
+      <button class="btn-sec" id="btn-cerrar-respaldo" style="margin-top:6px;">Cerrar</button>
     </div>
+  </div>
+</div>
 
+<!-- MODAL MODO IMPORTACIÓN -->
+<div id="modal-modo-importacion" class="modal hidden">
+  <div class="modal-box" style="border-color: var(--accent);">
+    <div class="modal-icon">⚠️</div>
+    <h3>Restaurar Respaldo</h3>
+    <p>¿Cómo deseas aplicar los datos del archivo importado?</p>
+    <div style="display:flex;flex-direction:column;gap:10px;width:100%;margin-top:10px;">
+      <button class="btn-primary" id="btn-importar-combinar">Combinar con datos actuales</button>
+      <button class="btn-danger" id="btn-importar-reemplazar">Reemplazar todo</button>
+      <button class="btn-sec" id="btn-cancelar-importacion">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMAR -->
+<div id="modal-confirmar" class="modal hidden">
+  <div class="modal-box modal-danger-box">
+    <div class="modal-icon">⚠️</div>
     <h3 id="confirm-titulo"></h3>
-
     <p id="confirm-msg"></p>
-
-
     <div class="reporte-btns">
-
-      <button
-        class="btn-sec"
-        id="btn-conf-cancel"
-      >
-        Cancelar
-      </button>
-
-      <button
-        class="btn-danger"
-        id="btn-conf-ok"
-      ></button>
-
+      <button class="btn-sec" id="btn-conf-cancel">Cancelar</button>
+      <button class="btn-danger" id="btn-conf-ok"></button>
     </div>
-
   </div>
-
 </div>
 
+<div id="toast" class="toast hidden"></div>
 
-<div
-  id="toast"
-  class="toast hidden"
-></div>
-
-
-<script
-  type="module"
-  src="app.js?v=4"
-></script>
-
+<script type="module" src="app.js?v=5"></script>
 </body>
 </html>
